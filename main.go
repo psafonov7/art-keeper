@@ -1,35 +1,51 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"os"
 
-	"art-keeper/github"
-	"art-keeper/s3"
 	"art-keeper/utils"
 
+	"art-keeper/art_move"
+
+	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 )
 
-const Repo = "instrumenta/kubeval"
+type Config struct {
+	Repos []string `yaml:"repos"`
+}
+
+const Workdir = "/etc/art-keeper"
+const ConfigPath = Workdir + "/config.yaml"
+const ArtifactsPath = Workdir + "/artifacts"
 
 func main() {
+	setupWorkDir()
 	godotenv.Load()
+	config := parseConfig(ConfigPath)
+	for _, repo := range config.Repos {
+		art_move.MoveRepoArtifacts(repo, ArtifactsPath)
+	}
+}
 
-	releases, err := github.GetReleases(Repo)
-	if err != nil {
-		fmt.Printf("Error: %s", err.Error())
-		return
+func setupWorkDir() {
+	if err := utils.CreateFolder(Workdir); err != nil {
+		log.Fatalf("Can't create workdir at path '%s', error: %s", Workdir, err.Error())
 	}
-	asset := releases[0].Assets[1]
-	err = utils.DownloadFile(asset.Url, asset.Name)
-	if err != nil {
-		fmt.Printf("Error: %s", err.Error())
-		return
+	if err := utils.CreateFolder(ArtifactsPath); err != nil {
+		log.Fatalf("Can't create artifacts folder at path '%s', error: %s", Workdir, err.Error())
 	}
+}
 
-	err = s3.UploadFile(asset.Name, asset.Name)
+func parseConfig(path string) Config {
+	ymlBytes, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Printf("Error: %s", err.Error())
-		return
+		log.Fatalf("Unable to read file: %s", err.Error())
 	}
+	config := Config{}
+	if err := yaml.Unmarshal([]byte(ymlBytes), &config); err != nil {
+		log.Fatalf("Config parsing error: %s", err.Error())
+	}
+	return config
 }
