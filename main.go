@@ -34,7 +34,7 @@ func setupWorkDir() {
 		log.Fatalf("Can't create workdir at path '%s', error: %s", Workdir, err.Error())
 	}
 	if err := utils.CreateFolder(ArtifactsPath); err != nil {
-		log.Fatalf("Can't create artifacts folder at path '%s', error: %s", Workdir, err.Error())
+		log.Fatalf("Can't create artifacts folder at path '%s', error: %s", ArtifactsPath, err.Error())
 	}
 }
 
