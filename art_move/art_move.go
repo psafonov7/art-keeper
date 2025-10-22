@@ -6,6 +6,7 @@ import (
 	"log"
 	"slices"
 	"strings"
+	"os"
 
 	"art-keeper/checksums"
 	"art-keeper/github"
@@ -94,6 +95,9 @@ func moveArtifact(asset github.Asset, name string, artsFolderPath string) {
 	if err := s3.UploadFile(artPath, name); err != nil {
 		log.Printf("Upload artifact '%s' error: %s", name, err.Error())
 		return
+	}
+	if err := os.Remove(artPath); err != nil {
+		log.Printf("Error removing directory %s: %v", artPath, err)
 	}
 }
 
