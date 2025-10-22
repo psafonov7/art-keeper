@@ -16,6 +16,21 @@ const S3SecretAccessKeyEnv = "S3_SECRET_ACCESS_KEY"
 const BucketName = "bucket"
 const DefaultRegion = "us-east-1"
 
+const ObjectNotExistErrorCode = "NoSuchKey"
+
+var client *minio.Client
+var ctx context.Context
+
+func Setup() {
+	c, err := createClient()
+	if err != nil {
+		panic("")
+	}
+	client = c
+
+	ctx = context.Background()
+}
+
 func UploadFile(filePath string, objectName string) error {
 	contentType := "application/octet-stream"
 	ctx := context.Background()
@@ -23,7 +38,7 @@ func UploadFile(filePath string, objectName string) error {
 	if err != nil {
 		return err
 	}
-	createBucketIfNotExists(ctx, client, BucketName)
+	createBucketIfNotExists(ctx, BucketName)
 	_, err = client.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{ContentType: contentType})
 	if err != nil {
 		log.Fatalln(err)
@@ -31,7 +46,24 @@ func UploadFile(filePath string, objectName string) error {
 	return nil
 }
 
-func createBucketIfNotExists(ctx context.Context, client *minio.Client, bucketName string) {
+func IsObjectExists(objName string, checksum string) (bool, error) {
+	client, err := createClient()
+	if err != nil {
+		return false, err
+	}
+	o := minio.ObjectAttributesOptions{}
+	attr, err := client.GetObjectAttributes(ctx, BucketName, objName, o)
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == ObjectNotExistErrorCode {
+			return false, nil
+		}
+		return false, err
+	}
+	match := attr.Checksum.ChecksumSHA1 == checksum
+	return match, nil
+}
+
+func createBucketIfNotExists(ctx context.Context, bucketName string) {
 	exists, err := client.BucketExists(ctx, bucketName)
 	if err != nil {
 		log.Fatalln(err)
@@ -56,8 +88,5 @@ func createClient() (*minio.Client, error) {
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: useSSL,
 	})
-	if err != nil {
-		return nil, err
-	}
 	return client, err
 }

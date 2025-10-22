@@ -23,6 +23,7 @@ const ArtifactsPath = Workdir + "/artifacts"
 func main() {
 	setupWorkDir()
 	godotenv.Load()
+	art_move.Setup()
 	config := parseConfig(ConfigPath)
 	for _, repo := range config.Repos {
 		art_move.MoveRepoArtifacts(repo, ArtifactsPath)
@@ -31,10 +32,10 @@ func main() {
 
 func setupWorkDir() {
 	if err := utils.CreateFolder(Workdir); err != nil {
-		log.Fatalf("Can't create workdir at path '%s', error: %s", Workdir, err.Error())
+		log.Fatalf("Can't create workdir at path %s, error: %s", Workdir, err.Error())
 	}
 	if err := utils.CreateFolder(ArtifactsPath); err != nil {
-		log.Fatalf("Can't create artifacts folder at path '%s', error: %s", ArtifactsPath, err.Error())
+		log.Fatalf("Can't create artifacts folder at path %s, error: %s", ArtifactsPath, err.Error())
 	}
 }
 
