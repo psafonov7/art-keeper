@@ -3,6 +3,7 @@ module art-keeper
 go 1.25.3
 
 require (
+	github.com/goccy/go-yaml v1.18.0
 	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.0.95
 )
