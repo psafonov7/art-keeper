@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Asset struct {
@@ -20,12 +21,31 @@ type Release struct {
 	Assets      []Asset `json:"assets"`
 }
 
-const GithubApiUrl = "https://api.github.com"
-const GithubTokenEnv = "GITHUB_TOKEN"
+type Client struct {
+	BaseURL string
+	Token   string
+	Client  *http.Client
+}
 
-func GetReleases(repo string) ([]Release, error) {
-	url := fmt.Sprintf("%s/repos/%s/releases", GithubApiUrl, repo)
-	resp, err := get(url)
+func NewClientDefault() *Client {
+	return NewClient(
+		"https://api.github.com",
+		os.Getenv("GITHUB_TOKEN"),
+		&http.Client{Timeout: 10 * time.Second},
+	) 
+}
+
+func NewClient(baseUrl string, token string, client *http.Client) *Client {
+	return &Client{
+		BaseURL: baseUrl,
+		Token:   token,
+		Client:  client,
+	}
+}
+
+func (c *Client) GetReleases(repo string) ([]Release, error) {
+	url := fmt.Sprintf("%s/repos/%s/releases", c.BaseURL, repo)
+	resp, err := get(url, c.Token, c.Client)
 	if err != nil {
 		return nil, err
 	}
@@ -35,12 +55,10 @@ func GetReleases(repo string) ([]Release, error) {
 	return releases, err
 }
 
-func get(url string) (*http.Response, error) {
-	githubToken := os.Getenv(GithubTokenEnv)
+func get(url string, token string, client *http.Client) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", githubToken))
-	client := &http.Client{}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
