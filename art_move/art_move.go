@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 	"strings"
-	"os"
 
 	"art-keeper/checksums"
 	"art-keeper/github"
@@ -23,7 +23,8 @@ func Setup() {
 }
 
 func MoveRepoArtifacts(repoName string, artsFolderPath string) {
-	releases, err := github.GetReleases(repoName)
+	client := github.NewClientDefault()
+	releases, err := client.GetReleases(repoName)
 	if err != nil {
 		log.Printf("Get assets from GitHub error: %s", err.Error())
 		return
