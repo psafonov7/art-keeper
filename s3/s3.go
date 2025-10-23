@@ -13,7 +13,7 @@ const S3EndpointEnv = "S3_ENDPOINT"
 const S3AccessKeyIdEnv = "S3_ACCESS_KEY_ID"
 const S3SecretAccessKeyEnv = "S3_SECRET_ACCESS_KEY"
 
-const BucketName = "bucket"
+const BucketName = "artifacts"
 const DefaultRegion = "us-east-1"
 
 const ObjectNotExistErrorCode = "NoSuchKey"
@@ -34,12 +34,7 @@ func Setup() {
 func UploadFile(filePath string, objectName string) error {
 	contentType := "application/octet-stream"
 	ctx := context.Background()
-	client, err := createClient()
-	if err != nil {
-		return err
-	}
-	createBucketIfNotExists(ctx, BucketName)
-	_, err = client.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{ContentType: contentType})
+	_, err := client.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{ContentType: contentType})
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -47,10 +42,6 @@ func UploadFile(filePath string, objectName string) error {
 }
 
 func IsObjectExists(objName string, checksum string) (bool, error) {
-	client, err := createClient()
-	if err != nil {
-		return false, err
-	}
 	o := minio.ObjectAttributesOptions{}
 	attr, err := client.GetObjectAttributes(ctx, BucketName, objName, o)
 	if err != nil {
@@ -63,19 +54,20 @@ func IsObjectExists(objName string, checksum string) (bool, error) {
 	return match, nil
 }
 
-func createBucketIfNotExists(ctx context.Context, bucketName string) {
-	exists, err := client.BucketExists(ctx, bucketName)
+func CreateBucketIfNotExists() error {
+	exists, err := client.BucketExists(ctx, BucketName)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
-	if !exists {
-		err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: DefaultRegion})
-		if err != nil {
-			log.Fatalln(err)
-		} else {
-			log.Printf("Bucket '%s' is created\n", bucketName)
-		}
+	if exists {
+		log.Printf("Bucket '%s' is alredy exists", BucketName)
+		return nil
 	}
+	err = client.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{Region: DefaultRegion})
+	if err == nil {
+		log.Printf("Bucket '%s' is created\n", BucketName)
+	}
+	return err
 }
 
 func createClient() (*minio.Client, error) {

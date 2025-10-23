@@ -28,8 +28,9 @@ func MoveRepoArtifacts(repoName string, artsFolderPath string) {
 		log.Printf("Get assets from GitHub error: %s", err.Error())
 		return
 	}
+	s3.CreateBucketIfNotExists()
 	for _, release := range releases {
-		log.Printf("========== Moving release '%s' ==========", release.TagName)
+		log.Printf("========== Moving %s %s ==========", repoName, release.TagName)
 		checksums, assetIdx, err := getChecksums(release, artsFolderPath)
 		if err != nil {
 			log.Printf("Get checksums from release '%s' error: %s", release.TagName, err.Error())
