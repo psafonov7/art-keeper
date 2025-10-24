@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"art-keeper/checksums"
+	"art-keeper/config"
 	"art-keeper/github"
 	"art-keeper/s3"
 	"art-keeper/utils"
@@ -22,7 +23,12 @@ func Setup() {
 	s3.Setup()
 }
 
-func MoveRepoArtifacts(repoName string, artsFolderPath string) {
+func MoveRepoArtifacts(
+	config config.Config,
+	repoName string,
+	artsFolderPath string,
+	dryRun bool,
+) {
 	client := github.NewClientDefault()
 	releases, err := client.GetReleases(repoName)
 	if err != nil {
@@ -38,12 +44,28 @@ func MoveRepoArtifacts(repoName string, artsFolderPath string) {
 			continue
 		}
 		release.Assets = slices.Delete(release.Assets, assetIdx, assetIdx+1)
-		moveAssets(release, repoName, checksums, artsFolderPath)
+		moveAssets(config, release, repoName, checksums, artsFolderPath, dryRun)
 	}
 }
 
-func moveAssets(release github.Release, repoName string, checksums map[string]string, artsFolderPath string) {
+func moveAssets(
+	config config.Config,
+	release github.Release,
+	repoName string,
+	checksums map[string]string,
+	artsFolderPath string,
+	dryRun bool,
+) {
 	for _, asset := range release.Assets {
+		filterSequence := NewFilterSequence(config.Filters)
+		if !filterSequence.Pass(asset.Name) {
+			continue
+		}
+		log.Printf("Moving artifact '%s'", asset.Name)
+		if dryRun {
+			continue
+		}
+
 		name := assetNameCorrection(asset, release, repoName)
 		exists, err := s3.IsObjectExists(name, checksums[asset.Name])
 		if err != nil {
@@ -88,7 +110,6 @@ func getChecksumsAsset(release github.Release) (string, int, error) {
 }
 
 func moveArtifact(asset github.Asset, name string, artsFolderPath string) {
-	log.Printf("Moving artifact '%s'", asset.Name)
 	artPath := artsFolderPath + "/" + name
 	if err := utils.DownloadFile(asset.Url, artPath); err != nil {
 		log.Printf("Download artifact '%s' error: %s", asset.Name, err.Error())
