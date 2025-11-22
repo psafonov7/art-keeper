@@ -1,0 +1,13 @@
+[project]
+name = "art-keeper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv==1.2.1",
+    "requests==2.32.5",
+    "minio==7.2.18",
+    "PyYAML==6.0.3",
+    "pyserde==0.25.1",
+]
