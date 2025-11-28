@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 from serde import serde
 from serde.json import from_json
 
@@ -23,12 +23,14 @@ class GithubClient:
         self._token = token
         self._base_url = base_url
 
-    def get_releases(self, repo: str) -> list[Release]:
+    async def get_releases(self, repo: str) -> list[Release]:
         headers = {
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {self._token}",
         }
         url = f"{self._base_url}/repos/{repo}/releases"
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return from_json(list[Release], response.text)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as response:
+                response.raise_for_status()
+                text = await response.text()
+                return from_json(list[Release], text)

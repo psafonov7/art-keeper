@@ -1,6 +1,8 @@
 import os
 
-import requests
+import aiofiles
+import aiohttp
+from aiohttp.client_reqrep import ClientResponse
 
 CHUNK_SIZE = 4096
 
@@ -25,9 +27,14 @@ def getenv_bool(key: str) -> bool:
             raise ValueError(f"Environment variable {key} is not a bool")
 
 
-def download_file(url: str, path: str):
-    response = requests.get(url, stream=True)
-    response.raise_for_status()
-    with open(path, "wb") as f:
-        for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-            f.write(chunk)
+async def download_file(url: str, path: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            response.raise_for_status()
+            await _write_file(response, path)
+
+
+async def _write_file(response: ClientResponse, path: str):
+    async with aiofiles.open(path, mode="wb") as f:
+        async for chunk in response.content.iter_chunked(CHUNK_SIZE):
+            await f.write(chunk)

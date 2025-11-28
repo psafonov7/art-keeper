@@ -7,11 +7,11 @@ CHECKSUMS_FILE_NAME = "CHECKSUMS"
 CHUNK_SIZE = 4096
 
 
-def checksums_from_url(url: str) -> dict[str, str]:
+async def checksums_from_url(url: str) -> dict[str, str]:
     with tempfile.TemporaryDirectory() as tmpdirname:
         file_path = tmpdirname + "/" + CHECKSUMS_FILE_NAME
         try:
-            download_file(url, file_path)
+            await download_file(url, file_path)
         except ValueError as e:
             print(e)
         return checksums_from_file(file_path)

@@ -1,0 +1,70 @@
+from contextlib import asynccontextmanager
+
+import aiofiles
+from aiobotocore.session import get_session
+from botocore.exceptions import ClientError
+
+
+class S3Client:
+    def __init__(
+        self,
+        endpoint: str,
+        access_key: str,
+        secret_key: str,
+        bucket_name: str,
+        region: str = "us-east-1",
+    ):
+        self.endpoint = endpoint
+        self.access_key = access_key
+        self.secret_key = secret_key
+        self.bucket_name = bucket_name
+        self.session = get_session()
+
+    @asynccontextmanager
+    async def get_client(self):
+        async with self.session.create_client(
+            service_name="s3",
+            endpoint_url=self.endpoint,
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_key,
+        ) as client:
+            yield client
+
+    async def upload_file(self, object_name: str, file_path: str):
+        try:
+            async with aiofiles.open(file_path, "rb") as f:
+                file_data = await f.read()
+            async with self.get_client() as client:
+                await client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=object_name,
+                    Body=file_data,
+                )
+                print(f"File {object_name} uploaded to {self.bucket_name}")
+        except ClientError as e:
+            print(f"Error uploading file: {e}")
+
+    async def is_object_exists(self, object_name: str) -> bool:
+        try:
+            async with self.get_client() as client:
+                await client.get_object_acl(Bucket=self.bucket_name, Key=object_name)
+            return True
+        except ClientError:
+            return False
+
+    async def create_bucket_if_needed(self, name: str):
+        exists = await self.is_bucket_exists(name)
+        if not exists:
+            async with self.get_client() as client:
+                await client.create_bucket(Bucket=name)
+                print(f"Created bucket {name}")
+        else:
+            print(f"Bucket {name} already exists")
+
+    async def is_bucket_exists(self, name: str) -> bool:
+        try:
+            async with self.get_client() as client:
+                await client.get_bucket_acl(Bucket=name)
+                return True
+        except ClientError:
+            return False
