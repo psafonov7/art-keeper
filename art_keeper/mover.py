@@ -98,9 +98,7 @@ class Mover:
         if dry_run:
             return
         checksum = checksums[asset.name]
-        exists = await s3client.is_object_exists(
-            self.BUCKET_NAME, object_name, checksum
-        )
+        exists = await s3client.is_object_exists(object_name, checksum)
         if not exists:
             await self.move_artifact(asset, object_name, artifacts_path, s3client)
         else:
@@ -128,7 +126,7 @@ class Mover:
             print(f"Download artifact '{asset.name}' error: {e}")
             return
         print(f"Uploading file {name}")
-        await s3client.upload_file(self.BUCKET_NAME, name, art_path)
+        await s3client.upload_file(name, art_path)
         os.remove(art_path)
 
     def asset_name_correction(

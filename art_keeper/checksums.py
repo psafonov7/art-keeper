@@ -1,3 +1,5 @@
+import base64
+import binascii
 import hashlib
 import tempfile
 
@@ -29,7 +31,7 @@ def checksums_from_file(path: str) -> dict[str, str]:
     return checksums_data
 
 
-def get_sha256_checksum(file_path: str) -> str | None:
+def get_file_sha256(file_path: str) -> str | None:
     sha256_hash = hashlib.sha256()
     try:
         with open(file_path, "rb") as f:
@@ -42,3 +44,21 @@ def get_sha256_checksum(file_path: str) -> str | None:
     except IOError as e:
         print(f"Error reading file {file_path}: {e}")
         return None
+
+
+def get_file_sha256_raw_base64(file_path: str) -> str | None:
+    checksum = get_file_sha256(file_path)
+    if checksum is None:
+        return None
+    return hex_to_base64(checksum)
+
+
+def base64_to_hex(base64_string: str) -> str:
+    raw_bytes = base64.b64decode(base64_string)
+    return binascii.hexlify(raw_bytes).decode()
+
+
+def hex_to_base64(hex_string: str) -> str:
+    hex_string = hex_string.strip().lower()
+    raw_bytes = binascii.unhexlify(hex_string)
+    return base64.b64encode(raw_bytes).decode()
