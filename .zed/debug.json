@@ -1,0 +1,9 @@
+[
+  {
+    "label": "art-keeper",
+    "adapter": "Debugpy",
+    "request": "launch",
+    "module": "art_keeper.main",
+    "cwd": "$ZED_WORKTREE_ROOT"
+  }
+]

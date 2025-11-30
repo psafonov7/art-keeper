@@ -33,7 +33,7 @@ class S3Client:
             yield client
 
     async def upload_file(self, object_name: str, file_path: str):
-        checksum = get_file_sha256_raw_base64(file_path)
+        checksum = await get_file_sha256_raw_base64(file_path)
         if checksum is None:
             raise ValueError(f"Can't calculate checksum for file {file_path}")
         try:

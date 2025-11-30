@@ -3,10 +3,13 @@ import binascii
 import hashlib
 import tempfile
 
+import aiofiles
+
 from .utils import download_file
 
 CHECKSUMS_FILE_NAME = "CHECKSUMS"
 CHUNK_SIZE = 4096
+DEFAULT_READ_SIZE = 64 * 1024  # 64KB
 
 
 async def checksums_from_url(url: str) -> dict[str, str]:
@@ -16,28 +19,31 @@ async def checksums_from_url(url: str) -> dict[str, str]:
             await download_file(url, file_path)
         except ValueError as e:
             print(e)
-        return checksums_from_file(file_path)
+        return await checksums_from_file(file_path)
 
 
-def checksums_from_file(path: str) -> dict[str, str]:
-    checksums_data = {}
-    with open(path, "r") as f:
-        for line in f:
+async def checksums_from_file(path: str) -> dict[str, str]:
+    async with aiofiles.open(path, "r") as f:
+        checksums_data = {}
+        async for line in f:
             cleaned = " ".join(line.split())
             parts = cleaned.strip().split(" ", 1)
             if len(parts) == 2:
                 checksum, filename = parts
                 checksums_data[filename] = checksum
-    return checksums_data
+        return checksums_data
 
 
-def get_file_sha256(file_path: str) -> str | None:
-    sha256_hash = hashlib.sha256()
+async def get_file_sha256(file_path: str) -> str | None:
     try:
-        with open(file_path, "rb") as f:
-            for byte_block in iter(lambda: f.read(4096), b""):
+        async with aiofiles.open(file_path, "rb") as f:
+            sha256_hash = hashlib.sha256()
+            while True:
+                byte_block = await f.read(DEFAULT_READ_SIZE)
+                if not byte_block:
+                    break
                 sha256_hash.update(byte_block)
-        return sha256_hash.hexdigest()
+            return sha256_hash.hexdigest()
     except FileNotFoundError:
         print(f"Error: File not found at {file_path}")
         return None
@@ -46,8 +52,8 @@ def get_file_sha256(file_path: str) -> str | None:
         return None
 
 
-def get_file_sha256_raw_base64(file_path: str) -> str | None:
-    checksum = get_file_sha256(file_path)
+async def get_file_sha256_raw_base64(file_path: str) -> str | None:
+    checksum = await get_file_sha256(file_path)
     if checksum is None:
         return None
     return hex_to_base64(checksum)
