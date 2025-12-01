@@ -54,7 +54,7 @@ class Mover:
                 filters=repo.filters,
                 artifacts_path=self.artifacts_path,
                 dry_run=self.dry_run,
-                verify_checksums=False,
+                verify_checksums=repo.verify_checksums,
                 s3client=s3client,
             )
             for release in releases

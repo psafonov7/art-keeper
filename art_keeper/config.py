@@ -13,6 +13,7 @@ class ConfigFilter:
 class ConfigRepo:
     name: str
     filters: Optional[list[ConfigFilter]]
+    verify_checksums: bool = True
 
 
 @serde
