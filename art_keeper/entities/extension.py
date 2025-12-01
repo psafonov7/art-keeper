@@ -1,12 +1,12 @@
 from enum import Enum
 
 
-class Arch(Enum):
-    X86_64 = ["x86_64", "x86-64", "x64", "amd64"]
-    ARM64 = ["arm64"]
+class FileExtension(Enum):
+    Exe = [".exe", "exe"]
+    Deb = [".deb", "deb"]
 
     @classmethod
-    def from_string(cls, string: str) -> "Arch":
+    def from_string(cls, string: str) -> "FileExtension":
         string = string.lower()
         for member in cls:
             if string in member.value:

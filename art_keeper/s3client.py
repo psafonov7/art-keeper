@@ -50,7 +50,17 @@ class S3Client:
         except ClientError as e:
             print(f"Error uploading file: {e}")
 
-    async def is_object_exists(self, object_name: str, expected_checksum: str) -> bool:
+    async def is_object_exists_name(self, object_name: str) -> bool:
+        async with self.get_client() as client:
+            try:
+                await client.head_object(Bucket=self.bucket_name, Key=object_name)
+                return True
+            except ClientError:
+                return False
+
+    async def is_object_exists_checksum(
+        self, object_name: str, expected_checksum: str
+    ) -> bool:
         expected_checksum = hex_to_base64(expected_checksum)
         async with self.get_client() as client:
             try:

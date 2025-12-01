@@ -1,8 +1,9 @@
 import asyncio
 import os
+from typing import Optional
 
 from .checksums import CHECKSUMS_FILE_NAME, checksums_from_url
-from .config import Config, ConfigFilter
+from .config import Config, ConfigFilter, ConfigRepo
 from .filters.filter_sequence import FilterSequence
 from .github import Asset, GithubClient, Release
 from .s3client import S3Client
@@ -11,7 +12,6 @@ from .utils import download_file, getenv
 
 class Mover:
     BUCKET_NAME = "artifacts"
-    REPO_NAME = "yannh/kubeconform"
     CHECKSUMS_FILE_NAME = "CHECKSUMS"
     ARTIFACTS_FOLDER_NAME = "artifacts"
 
@@ -26,10 +26,15 @@ class Mover:
         self.dry_run = dry_run
 
     async def move_all(self):
-        github_client = GithubClient(getenv("GITHUB_TOKEN"))
+        github_token = getenv("GITHUB_TOKEN")
+        github_client = GithubClient(github_token)
+        for repo in self.config.repos:
+            await self.move_repo(repo, github_client)
+
+    async def move_repo(self, repo: ConfigRepo, github_client: GithubClient):
         releases: list[Release] = []
         try:
-            releases = await github_client.get_releases(self.REPO_NAME)
+            releases = await github_client.get_releases(repo.name)
         except ValueError as e:
             print(e)
             return
@@ -45,9 +50,11 @@ class Mover:
         tasks = [
             self.move_release(
                 release=release,
-                config=self.config,
+                repo_name=repo.name,
+                filters=repo.filters,
                 artifacts_path=self.artifacts_path,
                 dry_run=self.dry_run,
+                verify_checksums=False,
                 s3client=s3client,
             )
             for release in releases
@@ -56,39 +63,51 @@ class Mover:
 
     async def move_release(
         self,
+        repo_name: str,
         release: Release,
-        config: Config,
+        filters: Optional[list[ConfigFilter]],
         artifacts_path: str,
         dry_run: bool,
+        verify_checksums: bool,
         s3client: S3Client,
     ):
+        checksums = {}
+        if verify_checksums:
+            checksums = await self.checksums_from_release(release)
+        assets = release.assets
+        if filters:
+            assets = self.filter_assets(release.assets, filters)
+        tasks = []
+        for asset in assets:
+            checksum: str | None = None
+            if verify_checksums:
+                checksum = checksums[asset.name]
+            tasks.append(
+                self.move_asset(
+                    asset=asset,
+                    release=release,
+                    repo_name=repo_name,
+                    checksum=checksum,
+                    artifacts_path=artifacts_path,
+                    dry_run=dry_run,
+                    s3client=s3client,
+                )
+            )
+        await asyncio.gather(*tasks)
+
+    async def checksums_from_release(self, release: Release) -> dict[str, str]:
         checksums_url, i, ok = self._get_checksum_url(release, CHECKSUMS_FILE_NAME)
         if not ok:
-            print(f"Checksums file not found in release {release.tag_name}")
-            return
+            raise ValueError(f"Checksums file not found in release {release.tag_name}")
         release.assets.pop(i)
-        checksums = await checksums_from_url(checksums_url)
-        assets = self.filter_assets(release, config.filters)
-        tasks = [
-            self.move_asset(
-                asset=asset,
-                release=release,
-                repo_name=self.REPO_NAME,
-                checksums=checksums,
-                artifacts_path=artifacts_path,
-                dry_run=dry_run,
-                s3client=s3client,
-            )
-            for asset in assets
-        ]
-        await asyncio.gather(*tasks)
+        return await checksums_from_url(checksums_url)
 
     async def move_asset(
         self,
         asset: Asset,
         release: Release,
         repo_name: str,
-        checksums: dict[str, str],
+        checksum: str | None,
         artifacts_path: str,
         dry_run: bool,
         s3client: S3Client,
@@ -97,23 +116,28 @@ class Mover:
         print(f"Moving {object_name}")
         if dry_run:
             return
-        checksum = checksums[asset.name]
-        exists = await s3client.is_object_exists(object_name, checksum)
+
+        exists = False
+        if checksum:
+            exists = await s3client.is_object_exists_checksum(object_name, checksum)
+        else:
+            exists = await s3client.is_object_exists_name(object_name)
+
         if not exists:
             await self.move_artifact(asset, object_name, artifacts_path, s3client)
         else:
             print(f"Artifact '{object_name}' is alredy exists, skipping")
 
     def filter_assets(
-        self, release: Release, filters: list[ConfigFilter]
+        self, assets: list[Asset], filters: list[ConfigFilter]
     ) -> list[Asset]:
-        assets = []
-        for asset in release.assets:
+        filtered = []
+        for asset in assets:
             filter_sequence = FilterSequence(filters)
             if not filter_sequence.is_pass(asset.name):
                 continue
-            assets.append(asset)
-        return assets
+            filtered.append(asset)
+        return filtered
 
     async def move_artifact(
         self, asset: Asset, name: str, arts_folder_path: str, s3client: S3Client

@@ -3,7 +3,7 @@ from art_keeper.config import ConfigFilter
 from .arch_filter import ArchFilter
 from .filter import Filter
 from .platform_filter import PlatformFilter
-
+from .extension_filter import ExtensionFilter
 
 class FilterSequence:
     def __init__(self, configs: list[ConfigFilter]):
@@ -24,5 +24,7 @@ class FilterSequence:
                 return ArchFilter(config.value)
             case "platform":
                 return PlatformFilter(config.value)
+            case "extension":
+                return ExtensionFilter(config.value)
             case _:
                 raise ValueError(f"Filter with type {config.type} doesn't exists")

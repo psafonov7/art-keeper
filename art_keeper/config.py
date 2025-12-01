@@ -1,3 +1,5 @@
+from typing import Optional
+
 from serde import serde
 
 
@@ -8,6 +10,11 @@ class ConfigFilter:
 
 
 @serde
+class ConfigRepo:
+    name: str
+    filters: Optional[list[ConfigFilter]]
+
+
+@serde
 class Config:
-    repos: list[str]
-    filters: list[ConfigFilter]
+    repos: list[ConfigRepo]
