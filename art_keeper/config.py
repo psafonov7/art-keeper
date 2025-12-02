@@ -13,6 +13,7 @@ class ConfigFilter:
 class ConfigRepo:
     name: str
     filters: Optional[list[ConfigFilter]]
+    last_releases_count: Optional[int]
     verify_checksums: bool = True
 
 

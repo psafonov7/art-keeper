@@ -32,13 +32,6 @@ class Mover:
             await self.move_repo(repo, github_client)
 
     async def move_repo(self, repo: ConfigRepo, github_client: GithubClient):
-        releases: list[Release] = []
-        try:
-            releases = await github_client.get_releases(repo.name)
-        except ValueError as e:
-            print(e)
-            return
-
         s3client = S3Client(
             endpoint=getenv("S3_ENDPOINT"),
             access_key=getenv("S3_ACCESS_KEY_ID"),
@@ -47,6 +40,14 @@ class Mover:
         )
         await s3client.create_bucket_if_needed(self.BUCKET_NAME)
 
+        page = 1
+        releases: list[Release] = []
+        while True:
+            next_page = await self._get_next_releases(github_client, repo, page)
+            if len(next_page) == 0:
+                break
+            releases.extend(next_page)
+            page += 1
         tasks = [
             self.move_release(
                 release=release,
@@ -60,6 +61,27 @@ class Mover:
             for release in releases
         ]
         await asyncio.gather(*tasks)
+
+    async def _get_next_releases(
+        self, github_client: GithubClient, repo: ConfigRepo, page: int
+    ) -> list[Release]:
+        if repo.last_releases_count:
+            if page != 1:
+                return []
+            try:
+                return await github_client.get_releases(
+                    repo.name, repo.last_releases_count
+                )
+            except ValueError as e:
+                print(e)
+                return []
+
+        try:
+            releases = await github_client.get_releases(repo.name, page=page)
+        except ValueError as e:
+            print(e)
+            return []
+        return releases
 
     async def move_release(
         self,
