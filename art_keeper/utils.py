@@ -1,4 +1,5 @@
 import os
+import re
 
 import aiofiles
 import aiohttp
@@ -38,3 +39,11 @@ async def _write_file(response: ClientResponse, path: str):
     async with aiofiles.open(path, mode="wb") as f:
         async for chunk in response.content.iter_chunked(CHUNK_SIZE):
             await f.write(chunk)
+
+
+def get_version(string: str) -> str | None:
+    regex = r"(\d+)\.(\d+)\.(\d+)"
+    match = re.search(regex, string)
+    if match is None:
+        return None
+    return match.group(1)

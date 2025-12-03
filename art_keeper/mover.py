@@ -7,7 +7,7 @@ from .config import Config, ConfigFilter, ConfigRepo
 from .filters.filter_sequence import FilterSequence
 from .github import Asset, GithubClient, Release
 from .s3client import S3Client
-from .utils import download_file, getenv
+from .utils import download_file, get_version, getenv
 
 
 class Mover:
@@ -181,7 +181,11 @@ class Mover:
         release: Release,
         repo_name: str,
     ) -> str:
-        if release.tag_name in asset.name:
+        tag = release.tag_name
+        version = get_version(tag)
+        if version is None:
+            raise ValueError(f"Version not found in tag: {tag}")
+        if version in asset.name:
             return asset.name
         project_name = repo_name.split("/")[1]
         i = asset.name.find(project_name) + len(project_name) + 1
