@@ -8,7 +8,4 @@ class ExtensionFilter(Filter):
         self._extension = FileExtension.from_string(name)
 
     def is_pass(self, name: str) -> bool:
-        for ext in self._extension.value:
-            if ext in name:
-                return True
-        return False
+        return f".{self._extension.value}" in name

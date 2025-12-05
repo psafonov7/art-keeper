@@ -4,6 +4,7 @@ from .arch_filter import ArchFilter
 from .filter import Filter
 from .platform_filter import PlatformFilter
 from .extension_filter import ExtensionFilter
+from .regex_filter import RegExFilter
 
 class FilterSequence:
     def __init__(self, configs: list[ConfigFilter]):
@@ -26,5 +27,7 @@ class FilterSequence:
                 return PlatformFilter(config.value)
             case "extension":
                 return ExtensionFilter(config.value)
+            case "regex":
+                return RegExFilter(config.value)
             case _:
                 raise ValueError(f"Filter with type {config.type} doesn't exists")

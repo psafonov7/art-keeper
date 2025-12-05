@@ -97,18 +97,17 @@ class Mover:
         if verify_checksums:
             checksums = await self.checksums_from_release(release)
         assets = release.assets
-        if filters:
-            assets = self.filter_assets(release.assets, filters)
         tasks = []
         for asset in assets:
             checksum: str | None = None
             if verify_checksums:
                 checksum = checksums[asset.name]
+            asset.name = self.asset_name_correction(asset, release, repo_name)
+            if not filters or not self.filter_asset(asset, filters):
+                continue
             tasks.append(
                 self.move_asset(
                     asset=asset,
-                    release=release,
-                    repo_name=repo_name,
                     checksum=checksum,
                     artifacts_path=artifacts_path,
                     dry_run=dry_run,
@@ -127,39 +126,29 @@ class Mover:
     async def move_asset(
         self,
         asset: Asset,
-        release: Release,
-        repo_name: str,
         checksum: str | None,
         artifacts_path: str,
         dry_run: bool,
         s3client: S3Client,
     ):
-        object_name = self.asset_name_correction(asset, release, repo_name)
-        print(f"Moving {object_name}")
+        print(f"Moving {asset.name}")
         if dry_run:
             return
 
         exists = False
         if checksum:
-            exists = await s3client.is_object_exists_checksum(object_name, checksum)
+            exists = await s3client.is_object_exists_checksum(asset.name, checksum)
         else:
-            exists = await s3client.is_object_exists_name(object_name)
+            exists = await s3client.is_object_exists_name(asset.name)
 
         if not exists:
-            await self.move_artifact(asset, object_name, artifacts_path, s3client)
+            await self.move_artifact(asset, asset.name, artifacts_path, s3client)
         else:
-            print(f"Artifact '{object_name}' is alredy exists, skipping")
+            print(f"Artifact '{asset.name}' is alredy exists, skipping")
 
-    def filter_assets(
-        self, assets: list[Asset], filters: list[ConfigFilter]
-    ) -> list[Asset]:
-        filtered = []
-        for asset in assets:
-            filter_sequence = FilterSequence(filters)
-            if not filter_sequence.is_pass(asset.name):
-                continue
-            filtered.append(asset)
-        return filtered
+    def filter_asset(self, asset: Asset, filters: list[ConfigFilter]) -> bool:
+        filter_sequence = FilterSequence(filters)
+        return filter_sequence.is_pass(asset.name)
 
     async def move_artifact(
         self, asset: Asset, name: str, arts_folder_path: str, s3client: S3Client
