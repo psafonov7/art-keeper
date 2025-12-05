@@ -185,13 +185,15 @@ class Mover:
         version = get_version(tag)
         if version is None:
             raise ValueError(f"Version not found in tag: {tag}")
-        if version in asset.name:
-            return asset.name
+        asset_name = asset.name
+        asset_name = asset_name.replace("_", "-")
+        if version in asset_name:
+            return asset_name
         project_name = repo_name.split("/")[1]
-        i = asset.name.find(project_name) + len(project_name) + 1
+        i = asset_name.find(project_name) + len(project_name) + 1
         if i <= 0:
             raise ValueError("Bad asset naming")
-        return asset.name[:i] + release.tag_name + "-" + asset.name[i:]
+        return asset_name[:i] + release.tag_name + "-" + asset_name[i:]
 
     def _get_checksum_url(
         self, release: Release, file_name: str
