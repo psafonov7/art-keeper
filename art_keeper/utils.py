@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 import aiofiles
 import aiohttp
@@ -26,6 +27,11 @@ def getenv_bool(key: str) -> bool:
             return False
         case _:
             raise ValueError(f"Environment variable {key} is not a bool")
+
+
+def create_dir(path: str):
+    directory_path = Path(path)
+    directory_path.mkdir(parents=True, exist_ok=True)
 
 
 async def download_file(url: str, path: str):

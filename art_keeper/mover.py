@@ -7,13 +7,12 @@ from .config import Config, ConfigFilter, ConfigRepo
 from .filters.filter_sequence import FilterSequence
 from .github import Asset, GithubClient, Release
 from .s3client import S3Client
-from .utils import download_file, get_version, getenv
+from .utils import create_dir, download_file, get_version, getenv
 
 
 class Mover:
     BUCKET_NAME = "artifacts"
     CHECKSUMS_FILE_NAME = "CHECKSUMS"
-    ARTIFACTS_FOLDER_NAME = "artifacts"
 
     def __init__(
         self,
@@ -32,6 +31,8 @@ class Mover:
             await self.move_repo(repo, github_client)
 
     async def move_repo(self, repo: ConfigRepo, github_client: GithubClient):
+        create_dir(self.artifacts_path)
+
         s3client = S3Client(
             endpoint=getenv("S3_ENDPOINT"),
             access_key=getenv("S3_ACCESS_KEY_ID"),
