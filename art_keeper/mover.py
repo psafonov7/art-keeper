@@ -3,7 +3,7 @@ import os
 from typing import Optional
 
 from .checksums import CHECKSUMS_FILE_NAME, checksums_from_url
-from .config import Config, ConfigFilter, ConfigRepo
+from .config import Config, ConfigFilter, ConfigArtifactsRepo
 from .filters.filter_sequence import FilterSequence
 from .github import Asset, GithubClient, Release
 from .s3client import S3Client
@@ -27,10 +27,10 @@ class Mover:
     async def move_all(self):
         github_token = getenv("GITHUB_TOKEN")
         github_client = GithubClient(github_token)
-        for repo in self.config.repos:
+        for repo in self.config.artifacts:
             await self.move_repo(repo, github_client)
 
-    async def move_repo(self, repo: ConfigRepo, github_client: GithubClient):
+    async def move_repo(self, repo: ConfigArtifactsRepo, github_client: GithubClient):
         create_dir(self.artifacts_path)
 
         s3client = S3Client(
@@ -64,7 +64,7 @@ class Mover:
         await asyncio.gather(*tasks)
 
     async def _get_next_releases(
-        self, github_client: GithubClient, repo: ConfigRepo, page: int
+        self, github_client: GithubClient, repo: ConfigArtifactsRepo, page: int
     ) -> list[Release]:
         if repo.last_releases_count:
             if page != 1:

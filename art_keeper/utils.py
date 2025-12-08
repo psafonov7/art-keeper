@@ -53,3 +53,16 @@ def get_version(string: str) -> str | None:
     if match is None:
         return None
     return match.group(1)
+
+
+def get_substring_between_strings(
+    text: str, start_delimiter: str, end_delimiter: str
+) -> str | None:
+    start_index = text.find(start_delimiter)
+    if start_index == -1:
+        return None
+    start_of_substring = start_index + len(start_delimiter)
+    end_index = text.find(end_delimiter, start_of_substring)
+    if end_index == -1:
+        return None
+    return text[start_of_substring:end_index]

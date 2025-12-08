@@ -10,7 +10,7 @@ class ConfigFilter:
 
 
 @serde
-class ConfigRepo:
+class ConfigArtifactsRepo:
     name: str
     filters: Optional[list[ConfigFilter]]
     last_releases_count: Optional[int]
@@ -18,5 +18,12 @@ class ConfigRepo:
 
 
 @serde
+class ConfigMirrorRepo:
+    source_url: str
+    target_url: str
+
+
+@serde
 class Config:
-    repos: list[ConfigRepo]
+    artifacts: list[ConfigArtifactsRepo]
+    repos: list[ConfigMirrorRepo]
