@@ -18,9 +18,17 @@ class ConfigArtifactsRepo:
 
 
 @serde
+class ConfigRepo:
+    url: str
+    platform: str = "github"
+    api_endpoint: Optional[str] = None
+    ssl: bool = True
+
+
+@serde
 class ConfigMirrorRepo:
-    source_url: str
-    target_url: str
+    source: ConfigRepo
+    target: ConfigRepo
 
 
 @serde
