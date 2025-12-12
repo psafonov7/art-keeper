@@ -28,7 +28,7 @@ class ConfigRepo:
 @serde
 class ConfigMirrorRepo:
     source: ConfigRepo
-    target: ConfigRepo
+    targets: list[ConfigRepo]
 
 
 @serde

@@ -66,3 +66,10 @@ def get_substring_between_strings(
     if end_index == -1:
         return None
     return text[start_of_substring:end_index]
+
+
+def safe_cast(val, to_type, default=None):
+    try:
+        return to_type(val)
+    except (ValueError, TypeError):
+        return default
